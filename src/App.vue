@@ -1,11 +1,11 @@
 <template>
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
-    <!--    <div class="fixed w-100 h-100 opacity-80 bg-purple-800 inset-0 z-50 flex items-center justify-center">-->
-    <!--      <svg class="animate-spin -ml-1 mr-3 h-12 w-12 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">-->
-    <!--        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>-->
-    <!--        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>-->
-    <!--      </svg>-->
-    <!--    </div>-->
+        <div v-if="loader === true" class="fixed w-100 h-100 opacity-80 bg-purple-800 inset-0 z-50 flex items-center justify-center">
+          <svg class="animate-spin -ml-1 mr-3 h-12 w-12 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
     <div class="container">
       <section>
         <div class="flex">
@@ -15,7 +15,7 @@
             >
             <div class="mt-1 relative rounded-md shadow-md">
               <input
-                @input="clear"
+                @input="onInput"
                 v-model="ticker"
                 type="text"
                 name="wallet"
@@ -28,7 +28,7 @@
             <span
               v-for="(item, idx) in defaultСurrencies"
               :key="idx"
-              @click="addCurrenceToInput(item)"
+              @click="addWithAutocomplite(item)"
               class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
               {{ item }}
             </span>
@@ -70,7 +70,7 @@
           <div
             v-for="(ticker, idx) in tickers"
             :key="idx"
-            @click="selectTicker(ticker)"
+            @click="selectTicker(tickerтз)"
             :class="{
             'border-2':sel === ticker
           }"
@@ -161,67 +161,109 @@ export default {
   data() {
     return {
       defaultСurrencies: [
-        "BTC", "DOGE", "BCH", "CHD"
+
       ],
+      loader: false,
       sel: null,
       ticker: "",
       isValid: true,
       tickers: [],
       tickerIsAlreadyUsed: false,
-      graph: []
+      graph: [],
+      currencies: []
     };
   },
 
+
   methods: {
-    clear() {
+    onInput() {
       this.isValid = true;
       this.tickerIsAlreadyUsed = false;
+
+      this.currencies.find(i => {
+        if (this.defaultСurrencies.length < 4) {
+          if (i === this.ticker.toUpperCase())  {
+            this.defaultСurrencies.push(i)
+            console.log(this.defaultСurrencies);
+          } else if (this.ticker === '') {
+            this.defaultСurrencies = []
+          }
+        }
+      })
+
+
+    },
+    subscribeToUpdates(tickerName) {
+      setInterval(async () => {
+        const r = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=3d2831a09e476908d056ddafe623e2da42f5a944c28f745e5ebce764478ca5d7`);
+        const data = await r.json();
+        const adaptiveData = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+        this.tickers.find(t => t.name === tickerName).price = adaptiveData;
+        if (this.sel.name === tickerName) {
+          this.graph.push(adaptiveData)
+        }
+      }, 5000);
     },
     add() {
       const newTicker = {
         name: this.ticker,
         price: "-"
       };
+
       if (newTicker.name === "") {
         this.isValid === false;
       }
       if (this.tickers.find(t => t.name === newTicker.name) !== undefined) {
-        console.log("yes");
         this.isValid = false;
         this.tickerIsAlreadyUsed = true;
-      }
+      };
+
+
       if (this.isValid) {
-        setInterval(async () => {
-          const r = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${newTicker.name}&tsyms=USD&api_key=3d2831a09e476908d056ddafe623e2da42f5a944c28f745e5ebce764478ca5d7`);
-          const data = await r.json();
-          const adaptiveData = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
-          this.tickers.find(t => t.name === newTicker.name).price = adaptiveData;
-          if (this.sel.name === newTicker.name) {
-            this.graph.push(adaptiveData)
-          }
-        }, 3000);
+
         this.tickers.push(newTicker);
+        localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
+        this.subscribeToUpdates(newTicker.name);
+
       }
     },
     deleteTicker(ticker) {
       this.tickers = this.tickers.filter(t => t.name !== ticker.name);
     },
-    addCurrenceToInput(item) {
+    addWithAutocomplite(item) {
       this.ticker = item;
+      this.add()
       this.clear();
     },
     normalizeGraph() {
-      const minV = Math.min(...this.graph)
-      const maxV = Math.max(...this.graph)
+      const minV = Math.min(...this.graph);
+      const maxV = Math.max(...this.graph);
       return this.graph.map(
         price => 10 + (price - minV) * 90 / (maxV - minV)
       );
     },
-    selectTicker(ticker) {
-      this.sel = ticker
-      this.graph = []
+    async getAllCurrencies() {
+      this.loader = true
+      const response = await fetch('https://min-api.cryptocompare.com/data/all/coinlist?summary=true', {
+        method: 'GET'
+      })
+      const data = await response.json();
+      this.currencies = Object.keys(data.Data)
+      this.loader = false
     }
+  },
+  mounted() {
+    this.getAllCurrencies()
+  },
+  created() {
+    const tickersData = localStorage.getItem('cryptonomicon-list');
 
+    if (tickersData) {
+      this.tickers = JSON.parse(tickersData)
+      this.tickers.forEach(ticker => {
+        this.subscribeToUpdates(ticker.name)
+      })
+    }
   }
 
 
