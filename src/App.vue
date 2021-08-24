@@ -66,11 +66,19 @@
         v-if="tickers.length"
       >
         <hr class="w-full border-t border-gray-600 my-4" />
+
+        <div>
+          <button v-if="page > 1" @click="page = page - 1" class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">Назад</button>
+          <button v-if="hasNextPage" @click="page = page + 1" class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">Вперёд</button>
+         <div>Фильтр: <input v-model="filter"/></div>
+
+        </div>
+        <hr class="w-full border-t border-gray-600 my-4" />
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
-            v-for="(ticker, idx) in tickers"
+            v-for="(ticker, idx) in filteredTickers()"
             :key="idx"
-            @click="selectTicker(tickerтз)"
+            @click="sel = ticker"
             :class="{
             'border-2':sel === ticker
           }"
@@ -170,7 +178,10 @@ export default {
       tickers: [],
       tickerIsAlreadyUsed: false,
       graph: [],
-      currencies: []
+      currencies: [],
+      page: 1,
+      filter: "",
+      hasNextPage: false,
     };
   },
 
@@ -179,10 +190,11 @@ export default {
     onInput() {
       this.isValid = true;
       this.tickerIsAlreadyUsed = false;
+      this.defaultСurrencies = []
 
-      this.currencies.find(i => {
+      this.currencies.filter(i => {
         if (this.defaultСurrencies.length < 4) {
-          if (i === this.ticker.toUpperCase())  {
+          if (i.includes(this.ticker.toUpperCase()))  {
             this.defaultСurrencies.push(i)
             console.log(this.defaultСurrencies);
           } else if (this.ticker === '') {
@@ -190,6 +202,15 @@ export default {
           }
         }
       })
+    },
+    filteredTickers() {
+      const start = (this.page - 1) * 6;
+      const end = this.page * 6;
+      const filteredTickers =  this.tickers.filter(ticker =>
+        ticker.name.includes(this.filter.toUpperCase()));
+
+      this.hasNextPage = filteredTickers.length > end
+      return filteredTickers.slice(start, end);
 
 
     },
@@ -222,6 +243,8 @@ export default {
       if (this.isValid) {
 
         this.tickers.push(newTicker);
+        this.filter = ''
+
         localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
         this.subscribeToUpdates(newTicker.name);
 
@@ -229,6 +252,7 @@ export default {
     },
     deleteTicker(ticker) {
       this.tickers = this.tickers.filter(t => t.name !== ticker.name);
+      localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
     },
     addWithAutocomplite(item) {
       this.ticker = item;
@@ -256,6 +280,16 @@ export default {
     this.getAllCurrencies()
   },
   created() {
+    const windowData = Object.fromEntries(new URL(window.location).searchParams.entries());
+
+    if (windowData.filter) {
+      this.filter = windowData.filter
+    }
+
+    if (windowData.page) {
+      this.page = windowData.page
+    }
+
     const tickersData = localStorage.getItem('cryptonomicon-list');
 
     if (tickersData) {
@@ -263,6 +297,22 @@ export default {
       this.tickers.forEach(ticker => {
         this.subscribeToUpdates(ticker.name)
       })
+    }
+  },
+  watch: {
+    filter() {
+      this.page = 1;
+
+      window.history.pushState(
+        null,
+        document.title,
+        `${window.location.pathname}?filter=${this.filter}&page=${this.page}`);
+    },
+    page() {
+      this.page = 1;
+
+      window.history.pushState(null, document.title,
+        `${window.location.pathname}?filter=${this.filter}&page=${this.page}`);
     }
   }
 
