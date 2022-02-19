@@ -306,6 +306,22 @@
   </div>
 </template>
 
+
+// [×] 6. Наличие в состоянии ЗАВИСИМЫХ ДАННЫХ / Критичность: 5+
+// [ ] 4. Запросы напрямую внутри компонента (???) / Критичность: 5
+// [ ] 2. При удалении остается подписка на загрузку тикера | Критичность: 5
+// [ ] 5. Обработка ошибок API | Критичность: 5
+// [ ] 3. Количество запросов | Критичность: 4
+// [×] 8. При удалении тикера не изменяется localStorage | Критичность: 4
+// [×] 1. Одинаковый код в watch | Критичность: 3
+// [ ] 9. localStorage и анонимные вкладки | Критичность: 3
+// [ ] 7. График ужасно выглядит если будет много цен / Критичность: 2
+// [ ] 10. Магические строки и числа (URL, 5000 миллисекунд задержки, ключ локалстораджа, количество на странице) / Критичность:
+
+// // Параллельно
+// [×] График сломан если везде одинаковые значения
+// [x] При удалении стикера остается выбор
+
 <script>
 export default {
   name: "App",
@@ -358,6 +374,13 @@ export default {
       return this.graph.map(
         (price) => 10 + ((price - minV) * 90) / (maxV - minV)
       );
+    },
+
+    pageStateOptions() {
+      return {
+        filter: this.filter,
+        page: this.page
+      };
     },
   },
   methods: {
@@ -480,25 +503,20 @@ export default {
     },
 
     paginatedTickers() {
-      if (this.paginatedTickers.length === 0 && this.page > 1) {
-        this.page -= 1;
+      if (this.paginatedTickers.length === 0) {
+        this.page = Math.max(1, this.page - 1);
       }
     },
 
     filter() {
       this.page = 1;
-
-      window.history.pushState(
-        null,
-        document.title,
-        `${window.location.pathname}?filter=${this.filter}&page=${this.page}`
-      );
     },
-    page() {
+
+    pageStateOptions(value) {
       window.history.pushState(
         null,
         document.title,
-        `${window.location.pathname}?filter=${this.filter}&page=${this.page}`
+        `${window.location.pathname}?filter=${value.filter}&page=${value.page}`
       );
     },
   },
