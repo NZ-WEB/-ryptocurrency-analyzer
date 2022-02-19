@@ -169,7 +169,7 @@
           </button>
           <button
             v-if="hasNextPage"
-            @click="page = page + 1"
+            @click="page = +page + 1"
             class="
               my-4
               mx-2
@@ -203,9 +203,9 @@
           <div
             v-for="(ticker, idx) in paginatedTickers"
             :key="idx"
-            @click="sel = ticker"
+            @click="selectedTicker = ticker"
             :class="{
-              'border-2': sel === ticker,
+              'border-2': selectedTicker === ticker,
             }"
             class="
               bg-white
@@ -262,9 +262,9 @@
         </dl>
         <hr class="w-full border-t border-gray-600 my-4" />
       </template>
-      <section v-if="sel" class="relative">
+      <section v-if="selectedTicker" class="relative">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          {{ sel.name }} - USD
+          {{ selectedTicker.name }} - USD
         </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
           <div
@@ -275,7 +275,7 @@
           ></div>
         </div>
         <button
-          @click="sel = null"
+          @click="selectedTicker = null"
           type="button"
           class="absolute top-0 right-0"
         >
@@ -313,7 +313,7 @@ export default {
     return {
       filteredCurrencies: [],
       loader: false,
-      sel: null,
+      selectedTicker: null,
       ticker: "",
       isValid: true,
       tickers: [],
@@ -387,7 +387,7 @@ export default {
         const adaptiveData =
           data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
         this.tickers.find((t) => t.name === tickerName).price = adaptiveData;
-        if (this.sel?.name === tickerName) {
+        if (this.selectedTicker?.name === tickerName) {
           this.graph.push(adaptiveData);
         }
       }, 5000);
@@ -407,13 +407,9 @@ export default {
       }
 
       if (this.isValid) {
-        this.tickers.push(newTicker);
+        this.tickers = [...this.tickers, newTicker];
         this.filter = "";
 
-        localStorage.setItem(
-          "cryptonomicon-list",
-          JSON.stringify(this.tickers)
-        );
         this.subscribeToUpdates(newTicker.name);
       }
     },
@@ -421,6 +417,9 @@ export default {
     deleteTicker(ticker) {
       this.tickers = this.tickers.filter((t) => t.name !== ticker.name);
       localStorage.setItem("cryptonomicon-list", JSON.stringify(this.tickers));
+      if (this.selectedTicker == ticker) {
+        this.selectedTicker = null;
+      }
     },
 
     addWithAutocomplite(item) {
@@ -472,6 +471,20 @@ export default {
     }
   },
   watch: {
+    selectedTicker() {
+      this.graph = [];
+    },
+
+    tickers() {
+      localStorage.setItem("cryptonomicon-list", JSON.stringify(this.tickers));
+    },
+
+    paginatedTickers() {
+      if (this.paginatedTickers.length === 0 && this.page > 1) {
+        this.page -= 1;
+      }
+    },
+
     filter() {
       this.page = 1;
 
@@ -482,8 +495,6 @@ export default {
       );
     },
     page() {
-      this.page = 1;
-
       window.history.pushState(
         null,
         document.title,
