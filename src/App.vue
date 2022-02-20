@@ -323,7 +323,7 @@
 // [×] График сломан если везде одинаковые значения
 // [x] При удалении стикера остается выбор
 
-import { loadAllCurrencies, subscribeToTicker } from "./api";
+import { loadAllCurrencies, subscribeToTicker, unsubscribeFromTicker } from "./api";
 
 export default {
   name: "App",
@@ -415,6 +415,14 @@ export default {
       // });
     },
 
+    updateTicker(tickerName, price) {
+      this.tickers
+        .filter((t) => t.name === tickerName)
+        .forEach((t) => {
+          t.price = price;
+        });
+    },
+
     add() {
       const newTicker = {
         name: this.ticker,
@@ -431,8 +439,11 @@ export default {
 
       if (this.isValid) {
         this.tickers = [...this.tickers, newTicker];
+        this.ticker = ""
         this.filter = "";
-        subscribeToTicker(this.ticker.name, () => {});
+        subscribeToTicker(newTicker.name, (newPrice) =>
+          this.updateTickers(newTicker.name, newPrice)
+        );
       }
     },
 
@@ -442,6 +453,8 @@ export default {
       if (this.selectedTicker == ticker) {
         this.selectedTicker = null;
       }
+
+      unsubscribeFromTicker(ticker.name);
     },
 
     addWithAutocomplite(item) {
@@ -499,7 +512,9 @@ export default {
     if (tickersData) {
       this.tickers = JSON.parse(tickersData);
       this.tickers.forEach((ticker) =>
-        subscribeToTicker(ticker.name, () => {})
+        subscribeToTicker(ticker.name, (newPrice) =>
+          this.updateTicker(ticker.name, newPrice)
+        )
       );
     }
 
