@@ -267,7 +267,10 @@
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
           {{ selectedTicker.name }} - USD
         </h3>
-        <div class="flex items-end border-gray-600 border-b border-l h-64">
+        <div
+          class="flex items-end border-gray-600 border-b border-l h-64"
+          ref="graph"
+        >
           <div
             v-for="(bar, idx) in normalizedGraph"
             :key="idx"
@@ -345,6 +348,7 @@ export default {
       currencies: [],
       page: 1,
       filter: "",
+      maxGraphElements: 1,
     };
   },
   computed: {
@@ -500,13 +504,32 @@ export default {
     },
 
     addToGraph(name, price) {
+      while (this.graph.length > this.maxGraphElements) {
+        this.graph.shift();
+      }
+
       if (this.selectedTicker?.name === name) {
         this.graph.push(price);
       }
     },
+
+    calculateMaxGraphElements() {
+      if (!this.$refs.graph) {
+        return;
+      }
+
+      this.maxGraphElements = this.$refs.graph.clientWidth / 38;
+    },
   },
+
   mounted() {
     this.getAllCurrencies();
+
+    window.addEventListener("resize", this.calculateMaxGraphElements);
+  },
+
+  beforeUnmount() {
+    window.removeEventListener("resize", this.calculateMaxGraphElements);
   },
   created() {
     const windowData = Object.fromEntries(

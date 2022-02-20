@@ -24,7 +24,7 @@ socket.addEventListener("message", (e) => {
     currency = param.split("~")[2];
   }
 
-  if (param.split('~')[3] === "BTC" && message == "INVALID_SUB") {
+  if (param && param.split("~")[3] === "BTC" && message == "INVALID_SUB") {
     unsubscribeFromTickerOnWs(currency, "BTC");
     return;
   }
