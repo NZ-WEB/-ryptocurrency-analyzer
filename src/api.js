@@ -1,3 +1,6 @@
+// Если монета не корректна, добавить класс bg-red-100
+// если монетка не существует, приходит сообщение INVALID SUB
+
 const API_KEY =
   "4055ed30f566cefff5cf673d1876020e386c6e07eae5ef63a818bb7d343a6725";
 
@@ -9,20 +12,33 @@ const socket = new WebSocket(
 );
 
 socket.addEventListener("message", (e) => {
-  const {
+  let {
     TYPE: type,
     FROMSYMBOL: currency,
     PRICE: newPrice,
+    MESSAGE: message,
+    PARAMETER: param,
   } = JSON.parse(e.data);
 
-  if (type !== AGREGATE_INDEX) return;
-
+  if (!currency && message === "INVALID_SUB") {
+    currency = param.split("~")[2];
+  }
   const handlers = tickersHendlers.get(currency) ?? [];
+
+  if (message === "INVALID_SUB") {
+    unsubscribeFromTicker(currency);
+    handlers.forEach((fn) => fn("ERROR"));
+    return "ERROR";
+  }
+
+  if (type !== AGREGATE_INDEX || newPrice == undefined) return;
+
   handlers.forEach((fn) => fn(newPrice));
 });
 
 const sendToWs = (message) => {
   const stringifiedMessage = JSON.stringify(message);
+
   if (socket.readyState === WebSocket.OPEN) {
     socket.send(stringifiedMessage);
     return;
@@ -51,11 +67,6 @@ const unsubscribeFromTickerOnWs = (ticker) => {
   });
 };
 
-export const loadAllCurrencies = () =>
-  fetch(
-    "https://min-api.cryptocompare.com/data/all/coinlist?summary=true"
-  ).then((r) => r.json());
-
 export const subscribeToTicker = (ticker, cb) => {
   const subscribers = tickersHendlers.get(ticker) || [];
   tickersHendlers.set(ticker, [...subscribers, cb]);
@@ -66,3 +77,8 @@ export const unsubscribeFromTicker = (ticker) => {
   tickersHendlers.delete(ticker);
   unsubscribeFromTickerOnWs(ticker);
 };
+
+export const loadAllCurrencies = () =>
+  fetch(
+    "https://min-api.cryptocompare.com/data/all/coinlist?summary=true"
+  ).then((r) => r.json());

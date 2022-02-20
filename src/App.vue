@@ -206,6 +206,7 @@
             @click="selectedTicker = ticker"
             :class="{
               'border-2': selectedTicker === ticker,
+              'bg-red-100': ticker.status !== 'valid',
             }"
             class="
               bg-white
@@ -407,22 +408,15 @@ export default {
       }
     },
 
-    async updateTickers() {
-      // if (!this.tickers.length) {
-      //   return;
-      // }
-      // const dataResponse = await loadTickers(this.tickers.map((t) => t.name));
-      // this.tickers.forEach((ticker) => {
-      //   const price = dataResponse[ticker.name.toUpperCase()];
-      //   ticker.price = price ? price : "-";
-      //   this.addToGraph(ticker.name, ticker.price);
-      // });
-    },
-
-    updateTicker(tickerName, price) {
+    updateTicker(tickerName, value) {
       this.tickers
         .filter((t) => t.name === tickerName)
         .forEach((t) => {
+          if (value === "ERROR") {
+            t.status = "ERROR";
+            t.price = "-";
+          }
+
           if (
             t.name === this.selectedTicker?.name &&
             this.selectedTicker !== null
@@ -430,14 +424,15 @@ export default {
             this.addToGraph(t.name, t.price);
           }
 
-          t.price = price;
+          t.price = value;
         });
     },
 
-    async add() {
+    add() {
       const newTicker = {
         name: this.ticker,
         price: "-",
+        status: "valid",
       };
 
       if (newTicker.name === "") {
@@ -452,8 +447,9 @@ export default {
         this.tickers = [...this.tickers, newTicker];
         this.ticker = "";
         this.filter = "";
-        await subscribeToTicker(newTicker.name, (newPrice) =>
-          this.updateTickers(newTicker.name, newPrice)
+
+        subscribeToTicker(newTicker.name, (value) =>
+          this.updateTicker(newTicker.name, value)
         );
       }
     },
@@ -488,6 +484,10 @@ export default {
     formatPrice(price) {
       if (price === "-") {
         return price;
+      }
+
+      if (price === "ERROR") {
+        return "-";
       }
 
       if (!price) {
@@ -526,13 +526,11 @@ export default {
     if (tickersData) {
       this.tickers = JSON.parse(tickersData);
       this.tickers.forEach((ticker) =>
-        subscribeToTicker(ticker.name, (newPrice) =>
-          this.updateTicker(ticker.name, newPrice)
+        subscribeToTicker(ticker.name, (value) =>
+          this.updateTicker(ticker.name, value)
         )
       );
     }
-
-    setInterval(this.updateTickers, 5000);
   },
   watch: {
     selectedTicker() {
@@ -541,7 +539,6 @@ export default {
 
     tickers() {
       localStorage.setItem("cryptonomicon-list", JSON.stringify(this.tickers));
-      this.updateTickers();
     },
 
     paginatedTickers() {
