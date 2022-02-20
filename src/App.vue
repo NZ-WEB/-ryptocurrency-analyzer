@@ -323,7 +323,7 @@
 // [×] График сломан если везде одинаковые значения
 // [x] При удалении стикера остается выбор
 
-import { loadTickers, loadAllCurrencies } from "./api";
+import { loadAllCurrencies, subscribeToTicker } from "./api";
 
 export default {
   name: "App",
@@ -404,18 +404,15 @@ export default {
     },
 
     async updateTickers() {
-      if (!this.tickers.length) {
-        return;
-      }
-
-      const dataResponse = await loadTickers(this.tickers.map((t) => t.name));
-
-      this.tickers.forEach((ticker) => {
-        const price = dataResponse[ticker.name.toUpperCase()];
-        ticker.price = price ? price : "-";
-
-        this.addToGraph(ticker.name, ticker.price);
-      });
+      // if (!this.tickers.length) {
+      //   return;
+      // }
+      // const dataResponse = await loadTickers(this.tickers.map((t) => t.name));
+      // this.tickers.forEach((ticker) => {
+      //   const price = dataResponse[ticker.name.toUpperCase()];
+      //   ticker.price = price ? price : "-";
+      //   this.addToGraph(ticker.name, ticker.price);
+      // });
     },
 
     add() {
@@ -435,6 +432,7 @@ export default {
       if (this.isValid) {
         this.tickers = [...this.tickers, newTicker];
         this.filter = "";
+        subscribeToTicker(this.ticker.name, () => {});
       }
     },
 
@@ -500,6 +498,9 @@ export default {
 
     if (tickersData) {
       this.tickers = JSON.parse(tickersData);
+      this.tickers.forEach((ticker) =>
+        subscribeToTicker(ticker.name, () => {})
+      );
     }
 
     setInterval(this.updateTickers, 5000);
