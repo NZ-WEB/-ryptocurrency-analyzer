@@ -377,9 +377,9 @@ export default {
         return this.graph.map(() => 50);
       }
 
-      return this.graph.map(
-        (price) => 10 + ((price - minV) * 90) / (maxV - minV)
-      );
+      return this.graph
+        .filter((value) => value && typeof value == "number")
+        .map((price) => 10 + ((price - minV) * 90) / (maxV - minV));
     },
 
     pageStateOptions() {
@@ -423,6 +423,13 @@ export default {
       this.tickers
         .filter((t) => t.name === tickerName)
         .forEach((t) => {
+          if (
+            t.name === this.selectedTicker?.name &&
+            this.selectedTicker !== null
+          ) {
+            this.addToGraph(t.name, t.price);
+          }
+
           t.price = price;
         });
     },
@@ -446,7 +453,7 @@ export default {
         this.ticker = "";
         this.filter = "";
         await subscribeToTicker(newTicker.name, (newPrice) =>
-           this.updateTickers(newTicker.name, newPrice)
+          this.updateTickers(newTicker.name, newPrice)
         );
       }
     },
