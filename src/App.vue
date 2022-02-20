@@ -221,11 +221,11 @@
                 {{ ticker.name }} - USD
               </dt>
               <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                {{ ticker.price }}
+                {{ formatPrice(ticker.price) }}
               </dd>
             </div>
             <div class="w-full border-t border-gray-200"></div>
-            <butto
+            <button
               @click.stop="deleteTicker(ticker)"
               class="
                 flex
@@ -257,7 +257,7 @@
                 ></path>
               </svg>
               Удалить
-            </butto>
+            </button>
           </div>
         </dl>
         <hr class="w-full border-t border-gray-600 my-4" />
@@ -323,7 +323,7 @@
 // [×] График сломан если везде одинаковые значения
 // [x] При удалении стикера остается выбор
 
-import { loadTicker, loadAllCurrencies } from "./api";
+import { loadTickers, loadAllCurrencies } from "./api";
 
 export default {
   name: "App",
@@ -403,19 +403,21 @@ export default {
       }
     },
 
-    subscribeToUpdates(tickerName) {
-      setInterval(async () => {
-        const dataResponse = await loadTicker(tickerName);
-        const adaptiveData =
-          dataResponse.USD && dataResponse.USD > 1
-            ? dataResponse.USD.toFixed(2)
-            : dataResponse.USD.toPrecision(2);
-        this.tickers.find((t) => t.name === tickerName).price = adaptiveData;
-        if (this.selectedTicker?.name === tickerName) {
-          this.graph.push(adaptiveData);
-        }
-      }, 7000);
+    async updateTickers() {
+      if (!this.tickers.length) {
+        return;
+      }
+
+      const dataResponse = await loadTickers(this.tickers.map((t) => t.name));
+
+      this.tickers.forEach((ticker) => {
+        const price = dataResponse[ticker.name.toUpperCase()];
+        ticker.price = price ? price : "-";
+
+        this.addToGraph(ticker.name, ticker.price);
+      });
     },
+
     add() {
       const newTicker = {
         name: this.ticker,
@@ -433,8 +435,6 @@ export default {
       if (this.isValid) {
         this.tickers = [...this.tickers, newTicker];
         this.filter = "";
-
-        this.subscribeToUpdates(newTicker.name);
       }
     },
 
@@ -462,6 +462,23 @@ export default {
       this.currencies = Object.keys(currenciesResponseData.Data);
       this.loader = false;
     },
+
+    formatPrice(price) {
+      if (price === "-") {
+        return price;
+      }
+
+      price && price > 1
+        ? (price = price.toFixed(2))
+        : (price = price.toPrecision(2));
+      return price;
+    },
+
+    addToGraph(name, price) {
+      if (this.selectedTicker?.name === name) {
+        this.graph.push(price);
+      }
+    },
   },
   mounted() {
     this.getAllCurrencies();
@@ -483,10 +500,9 @@ export default {
 
     if (tickersData) {
       this.tickers = JSON.parse(tickersData);
-      this.tickers.forEach((ticker) => {
-        this.subscribeToUpdates(ticker.name);
-      });
     }
+
+    setInterval(this.updateTickers, 5000);
   },
   watch: {
     selectedTicker() {
@@ -495,6 +511,7 @@ export default {
 
     tickers() {
       localStorage.setItem("cryptonomicon-list", JSON.stringify(this.tickers));
+      this.updateTickers();
     },
 
     paginatedTickers() {
