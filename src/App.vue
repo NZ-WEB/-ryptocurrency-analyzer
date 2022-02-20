@@ -306,7 +306,7 @@
   </div>
 </template>
 
-
+<script>
 // [×] 6. Наличие в состоянии ЗАВИСИМЫХ ДАННЫХ / Критичность: 5+
 // [ ] 4. Запросы напрямую внутри компонента (???) / Критичность: 5
 // [ ] 2. При удалении остается подписка на загрузку тикера | Критичность: 5
@@ -319,10 +319,12 @@
 // [ ] 10. Магические строки и числа (URL, 5000 миллисекунд задержки, ключ локалстораджа, количество на странице) / Критичность:
 
 // // Параллельно
+
 // [×] График сломан если везде одинаковые значения
 // [x] При удалении стикера остается выбор
 
-<script>
+import { loadTicker, loadAllCurrencies } from "./api";
+
 export default {
   name: "App",
   data() {
@@ -379,7 +381,7 @@ export default {
     pageStateOptions() {
       return {
         filter: this.filter,
-        page: this.page
+        page: this.page,
       };
     },
   },
@@ -403,17 +405,16 @@ export default {
 
     subscribeToUpdates(tickerName) {
       setInterval(async () => {
-        const r = await fetch(
-          `https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=3d2831a09e476908d056ddafe623e2da42f5a944c28f745e5ebce764478ca5d7`
-        );
-        const data = await r.json();
+        const dataResponse = await loadTicker(tickerName);
         const adaptiveData =
-          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+          dataResponse.USD && dataResponse.USD > 1
+            ? dataResponse.USD.toFixed(2)
+            : dataResponse.USD.toPrecision(2);
         this.tickers.find((t) => t.name === tickerName).price = adaptiveData;
         if (this.selectedTicker?.name === tickerName) {
           this.graph.push(adaptiveData);
         }
-      }, 5000);
+      }, 7000);
     },
     add() {
       const newTicker = {
@@ -457,14 +458,8 @@ export default {
 
     async getAllCurrencies() {
       this.loader = true;
-      const response = await fetch(
-        "https://min-api.cryptocompare.com/data/all/coinlist?summary=true",
-        {
-          method: "GET",
-        }
-      );
-      const data = await response.json();
-      this.currencies = Object.keys(data.Data);
+      const currenciesResponseData = await loadAllCurrencies();
+      this.currencies = Object.keys(currenciesResponseData.Data);
       this.loader = false;
     },
   },
