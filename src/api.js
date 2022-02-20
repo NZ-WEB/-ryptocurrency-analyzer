@@ -23,12 +23,16 @@ socket.addEventListener("message", (e) => {
   if (!currency && message === "INVALID_SUB") {
     currency = param.split("~")[2];
   }
+
+  if (param.split('~')[3] === "BTC" && message == "INVALID_SUB") {
+    unsubscribeFromTickerOnWs(currency, "BTC");
+    return;
+  }
+
   const handlers = tickersHendlers.get(currency) ?? [];
 
-  if (message === "INVALID_SUB") {
-    unsubscribeFromTicker(currency);
-    handlers.forEach((fn) => fn("ERROR"));
-    return "ERROR";
+  if (subISInvalud(message, currency, handlers)) {
+    return;
   }
 
   if (type !== AGREGATE_INDEX || newPrice == undefined) return;
@@ -53,18 +57,31 @@ const sendToWs = (message) => {
   );
 };
 
-const subscribeToTickerOnWs = (ticker) => {
+const subscribeToTickerOnWs = (ticker, to = "USD") => {
   sendToWs({
     action: "SubAdd",
-    subs: [`5~CCCAGG~${ticker}~USD`],
+    subs: [`5~CCCAGG~${ticker}~${to}`],
   });
 };
 
-const unsubscribeFromTickerOnWs = (ticker) => {
+const unsubscribeFromTickerOnWs = (ticker, to = "USD") => {
   sendToWs({
     action: "SubRemove",
-    subs: [`5~CCCAGG~${ticker}~USD`],
+    subs: [`5~CCCAGG~${ticker}~${to}`],
   });
+};
+
+const subISInvalud = (message, currency, handlers) => {
+  if (message === "INVALID_SUB") {
+    unsubscribeFromTicker(currency);
+
+    subscribeToTickerOnWs(currency, "BTC");
+
+    handlers.forEach((fn) => fn("ERROR"));
+    return true;
+  } else {
+    return false;
+  }
 };
 
 export const subscribeToTicker = (ticker, cb) => {
