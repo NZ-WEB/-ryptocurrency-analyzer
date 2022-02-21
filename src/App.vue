@@ -115,7 +115,7 @@
             @click="selectedTicker = ticker"
             :class="{
               'border-2': selectedTicker === ticker,
-              'bg-red-100': ticker.status !== 'valid',
+              'bg-red-100': ticker.status !== 'valid'
             }"
             class="
               bg-white
@@ -172,8 +172,15 @@
         </dl>
         <hr class="w-full border-t border-gray-600 my-4" />
       </template>
-      <section v-if="selectedTicker" class="relative">
-        <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
+      <the-graph
+        v-if="selectedTicker"
+        :graph="graph"
+        :ticker="selectedTicker"
+        @close-graph="closeGraph"
+        ref="graph"
+      />
+      <!-- <section v-if="selectedTicker" class="relative"> -->
+      <!-- <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
           {{ selectedTicker.name }} - USD
         </h3>
         <div
@@ -213,8 +220,8 @@
               ></path>
             </g>
           </svg>
-        </button>
-      </section>
+        </button> -->
+      <!-- </section> -->
     </div>
   </div>
 </template>
@@ -239,16 +246,18 @@
 import {
   loadAllCurrencies,
   subscribeToTicker,
-  unsubscribeFromTicker,
+  unsubscribeFromTicker
 } from "./api";
 
 import TheAddTicker from "./components/TheAddTicker.vue";
+import TheGraph from "./components/TheGraph.vue";
 
 export default {
   name: "App",
 
   components: {
     TheAddTicker,
+    TheGraph
   },
 
   data() {
@@ -262,7 +271,7 @@ export default {
       page: 1,
       filter: "",
       maxGraphElements: 1,
-      currencies: [],
+      currencies: []
     };
   },
   computed: {
@@ -308,9 +317,9 @@ export default {
     pageStateOptions() {
       return {
         filter: this.filter,
-        page: this.page,
+        page: this.page
       };
-    },
+    }
   },
   methods: {
     updateTicker(tickerName, value) {
@@ -337,7 +346,7 @@ export default {
       const newTicker = {
         name: ticker,
         price: "-",
-        status: "valid",
+        status: "valid"
       };
 
       if (newTicker.name === "") {
@@ -414,6 +423,10 @@ export default {
 
       this.maxGraphElements = this.$refs.graph.clientWidth / 38;
     },
+
+    closeGraph() {
+      this.selectedTicker = null;
+    }
   },
 
   mounted() {
@@ -474,8 +487,7 @@ export default {
         document.title,
         `${window.location.pathname}?filter=${value.filter}&page=${value.page}`
       );
-    },
-  },
+    }
+  }
 };
 </script>
-

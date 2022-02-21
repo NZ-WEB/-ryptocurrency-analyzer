@@ -17,7 +17,7 @@ socket.addEventListener("message", (e) => {
     FROMSYMBOL: currency,
     PRICE: newPrice,
     MESSAGE: message,
-    PARAMETER: param,
+    PARAMETER: param
   } = JSON.parse(e.data);
 
   if (!currency && message === "INVALID_SUB") {
@@ -60,14 +60,14 @@ const sendToWs = (message) => {
 const subscribeToTickerOnWs = (ticker, to = "USD") => {
   sendToWs({
     action: "SubAdd",
-    subs: [`5~CCCAGG~${ticker}~${to}`],
+    subs: [`5~CCCAGG~${ticker}~${to}`]
   });
 };
 
 const unsubscribeFromTickerOnWs = (ticker, to = "USD") => {
   sendToWs({
     action: "SubRemove",
-    subs: [`5~CCCAGG~${ticker}~${to}`],
+    subs: [`5~CCCAGG~${ticker}~${to}`]
   });
 };
 
